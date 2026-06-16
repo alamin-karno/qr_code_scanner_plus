@@ -1,6 +1,31 @@
 ## Unreleased — 1.2.0
 
 #### iOS
+* **Fix iOS minimum deployment target** (Package.swift + podspec): raised from 12.0 to 13.0,
+  resolving a Swift Package Manager build failure where `FlutterFramework` requires iOS 13.
+  (Closes [#5](https://github.com/alamin-karno/qr_code_scanner_plus/issues/5),
+  upstream [vespr-wallet#23](https://github.com/vespr-wallet/qr_code_scanner_plus/issues/23))
+* **Fix camera preview rotated 90° in landscape-locked apps**: `NativeBarcodeScanner`
+  now sets `videoOrientation` on the preview layer connection at session start, using
+  `UIWindowScene` for iOS 13+ (SceneDelegate / iOS 26 compatible) and
+  `statusBarOrientation` on older systems. Also registers for
+  `UIDevice.orientationDidChangeNotification` so the orientation stays correct during
+  runtime rotations.
+  (Closes [#6](https://github.com/alamin-karno/qr_code_scanner_plus/issues/6),
+  upstream [vespr-wallet#19](https://github.com/vespr-wallet/qr_code_scanner_plus/issues/19))
+* **Auto-select best camera lens for QR scanning (triple-lens support)**: on iOS 13+,
+  `captureDevice(for:)` now prefers `.builtInTripleCamera` over `.builtInWideAngleCamera`,
+  letting AVFoundation switch between tele/wide/ultra-wide automatically. This allows
+  scanning small QR codes on iPhone 14 Pro / 15 Pro without manual camera switching.
+  (Closes [#7](https://github.com/alamin-karno/qr_code_scanner_plus/issues/7),
+  upstream [vespr-wallet#17](https://github.com/vespr-wallet/qr_code_scanner_plus/issues/17))
+* **Fix duplicate QR detections / `pauseCamera` appearing ineffective**: added a 1-second
+  per-code scan cooldown in `NativeBarcodeScanner.metadataOutput(_:didOutput:)`. The same
+  code is suppressed within the cooldown window, preventing dozens of identical callbacks
+  from firing in the gap between detection and the Flutter side calling `pauseCamera()`.
+  Cooldown resets when `resumeCamera()` is called.
+  (Closes [#8](https://github.com/alamin-karno/qr_code_scanner_plus/issues/8),
+  upstream [vespr-wallet#9](https://github.com/vespr-wallet/qr_code_scanner_plus/issues/9))
 * **Fix UI hang on dispose for iOS 18+**: `stopCamera()` now calls `pauseCamera` instead of
   `stopCamera` on iOS 18 and later to avoid a 1–3 second UI freeze when the scanner page is
   dismissed. iOS version is parsed robustly (handles hotfix versions like `26.0.1`).
@@ -39,6 +64,24 @@
 * Removed `js: ^0.7.1` (deprecated, WASM-incompatible).
 * Added `web: ^1.0.0` (required by the `dart:js_interop` web implementation).
 * Raised minimum Flutter SDK to `>=3.24.0` and Dart SDK to `>=3.5.0`.
+* Added `flutter_test` to `dev_dependencies` to support the new Dart unit test suite.
+
+#### Testing
+* **Added Dart unit test suite** (`test/`): 53 tests across 5 files covering `BarcodeFormat`
+  (enum values, `formatName`, `fromString` roundtrip and unknown fallback), `Barcode` model,
+  `SystemFeatures.fromJson`, `CameraException`, `CameraFacing`, and `QrScannerOverlayShape`
+  (construction, assertions, path generation, widget rendering).
+* **Expanded iOS Swift tests** to 25 test cases covering freeze/unfreeze idempotency, scan
+  rect lifecycle, multiple independent scanner instances, and the iOS 13 deployment target.
+
+#### CI
+* Added `flutter test` step to `.github/workflows/dart.yml` so tests run on every push and
+  pull request.
+
+#### Example App
+* Redesigned example app with a full-screen dark scanner UI, flash toggle in top bar, Pause /
+  Flip / History action buttons, a result card with one-tap copy, and a scrollable scan
+  history bottom sheet (up to 20 entries).
 
 ---
 

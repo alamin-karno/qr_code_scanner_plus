@@ -46,6 +46,11 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     private var isSessionStarted = false
     private var isFrozen = false
 
+    // Per-code cooldown to prevent duplicate detections (fixes issue #9).
+    private var lastDetectedCode: String?
+    private var lastDetectedTime: CFTimeInterval = 0
+    private let scanCooldown: CFTimeInterval = 1.0
+
     private let sessionQueue = DispatchQueue(label: "NativeBarcodeScanner.session")
 
     // MARK: - Init
@@ -54,6 +59,10 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         self.previewView = previewView
         self.camera = cameraPosition
         super.init()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: - Permission
@@ -96,6 +105,12 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         layer.videoGravity = .resizeAspectFill
         layer.frame = previewView.bounds
 
+        // Fix landscape orientation: set videoOrientation to match the current
+        // interface orientation before the preview layer is displayed (fixes issue #19).
+        if let connection = layer.connection, connection.isVideoOrientationSupported {
+            connection.videoOrientation = currentVideoOrientation()
+        }
+
         self.session = session
         self.previewLayer = layer
         self.isSessionStarted = true
@@ -104,6 +119,14 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         DispatchQueue.main.async {
             self.previewView.layer.insertSublayer(layer, at: 0)
         }
+
+        // Observe device orientation changes so the preview layer stays aligned.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(deviceOrientationDidChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
 
         sessionQueue.async {
             session.startRunning()
@@ -118,6 +141,8 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         guard isSessionStarted else { return }
         isSessionStarted = false
         isFrozen = false
+
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
 
         let sess = session
         sessionQueue.async {
@@ -146,6 +171,8 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     func unfreezeCapture() {
         guard isSessionStarted, isFrozen else { return }
         isFrozen = false
+        lastDetectedCode = nil
+        lastDetectedTime = 0
         let sess = session
         sessionQueue.async { sess?.startRunning() }
     }
@@ -211,14 +238,33 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
                         didOutput metadataObjects: [AVMetadataObject],
                         from connection: AVCaptureConnection) {
         let codes = metadataObjects.compactMap { $0 as? AVMetadataMachineReadableCodeObject }
-        if !codes.isEmpty { onCodesDetected?(codes) }
+        guard !codes.isEmpty else { return }
+
+        // Suppress re-delivery of the same code within the cooldown window (fixes issue #9).
+        let now = CACurrentMediaTime()
+        let topCode = codes.first?.stringValue
+        if topCode != nil, topCode == lastDetectedCode, now - lastDetectedTime < scanCooldown {
+            return
+        }
+        lastDetectedCode = topCode
+        lastDetectedTime = now
+
+        onCodesDetected?(codes)
     }
 
     // MARK: - Private helpers
 
+    /// Returns the best available capture device for the given position.
+    /// On iOS 13+, prefers the built-in triple camera (wide + ultra-wide + tele)
+    /// so AVFoundation can automatically switch lenses for macro/close scanning
+    /// (fixes issue #17: small QR codes on iPhone 14 Pro / 15 Pro).
     private func captureDevice(for position: AVCaptureDevice.Position) -> AVCaptureDevice? {
-        AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
+        var deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera]
+        if #available(iOS 13.0, *) {
+            deviceTypes.insert(.builtInTripleCamera, at: 0)
+        }
+        return AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
             mediaType: .video,
             position: position
         ).devices.first
@@ -234,5 +280,31 @@ class NativeBarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
             return
         }
         metadataOutput?.rectOfInterest = layer.metadataOutputRectConverted(fromLayerRect: rect)
+    }
+
+    /// Maps the current device/interface orientation to an AVCaptureVideoOrientation.
+    /// Uses UIWindowScene (required for SceneDelegate / iOS 26+); falls back to
+    /// statusBarOrientation on older systems (fixes issue #19).
+    private func currentVideoOrientation() -> AVCaptureVideoOrientation {
+        let orientation: UIInterfaceOrientation
+        if #available(iOS 13.0, *) {
+            orientation = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.interfaceOrientation ?? .portrait
+        } else {
+            orientation = UIApplication.shared.statusBarOrientation
+        }
+        switch orientation {
+        case .landscapeLeft:      return .landscapeLeft
+        case .landscapeRight:     return .landscapeRight
+        case .portraitUpsideDown: return .portraitUpsideDown
+        default:                  return .portrait
+        }
+    }
+
+    @objc private func deviceOrientationDidChange() {
+        guard let connection = previewLayer?.connection,
+              connection.isVideoOrientationSupported else { return }
+        connection.videoOrientation = currentVideoOrientation()
     }
 }

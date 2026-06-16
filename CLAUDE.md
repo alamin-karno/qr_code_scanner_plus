@@ -28,7 +28,22 @@ cd example && flutter run
 cd example && flutter run -d <device_id>
 ```
 
-There are no automated tests in this plugin. CI (`.github/workflows/dart.yml`) runs `flutter pub get`, `dart format --set-exit-if-changed .`, and `flutter analyze`.
+## Running Tests
+
+```bash
+# Run all Dart unit tests (fast, no device needed)
+flutter test
+
+# Run with verbose output
+flutter test --reporter=expanded
+
+# Run a single test file
+flutter test test/barcode_format_test.dart
+```
+
+**iOS Swift tests** live in `ios/qr_code_scanner_plus/Tests/` and are run via Xcode with the full Flutter build. They cannot be run with `swift test` directly because `FlutterFramework` is a local package injected by Flutter at build time. To run them: open `example/ios/Runner.xcworkspace` in Xcode → Product → Test.
+
+CI (`.github/workflows/dart.yml`) runs `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter analyze`, and `flutter test`.
 
 ## Architecture
 
@@ -107,6 +122,29 @@ android { defaultConfig { minSdkVersion 20 } }
 ```
 
 **Web** (`web/index.html`): Must include jsQR script before app bundle.
+
+## Testing Rules
+
+**For every new feature or bug fix, you MUST:**
+
+1. **Write tests before or alongside the code** — not after. Tests go in:
+   - `test/` for Dart unit tests (types, utilities, overlay shape, format parsing)
+   - `ios/qr_code_scanner_plus/Tests/` for Swift/iOS unit tests (scanner state, camera position, torch)
+
+2. **Run `flutter test` and confirm all tests pass** before considering the work done. Fix any failures before moving on — never leave tests broken.
+
+3. **Test coverage guidelines by layer:**
+   - **Dart types** (`lib/src/types/`): test every constructor, factory, and non-trivial method
+   - **`QrScannerOverlayShape`**: test all constructor paths including assertion failures
+   - **iOS `NativeBarcodeScanner`**: test state transitions (freeze/unfreeze/stop) and property accessors that don't require a real camera session
+   - **New public API**: every new parameter or method needs at least one happy-path test and one edge-case or error-path test
+
+4. **What to avoid testing:**
+   - Do not write tests that require a real camera or simulator — those belong in manual verification steps
+   - Do not test Flutter framework internals or platform channel plumbing directly
+   - Do not write tests that only verify that a line of code runs without asserting a meaningful outcome
+
+5. **Test file naming:** `test/<subject>_test.dart` and `Tests/<Subject>Tests.swift`
 
 ## Changelog & README Rules
 

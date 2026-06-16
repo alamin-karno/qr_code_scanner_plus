@@ -19,7 +19,7 @@ fixes and Swift Package Manager support.
   # Shared Swift sources — same directory used by Swift Package Manager.
   s.source_files     = 'qr_code_scanner_plus/Sources/qr_code_scanner_plus/**/*.swift'
   s.dependency 'Flutter'
-  s.ios.deployment_target = '12.0'
+  s.ios.deployment_target = '13.0'
   s.swift_version = '5.0'
 
   s.test_spec 'Tests' do |test_spec|
