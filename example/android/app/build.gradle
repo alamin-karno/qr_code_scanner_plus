@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace 'net.touchcapture.qr.flutterqrexample'
-    compileSdk 34
+    compileSdk 35
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
