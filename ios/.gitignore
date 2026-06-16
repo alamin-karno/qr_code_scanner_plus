@@ -40,6 +40,9 @@ playground.xcworkspace
 # Package.resolved
 .build/
 
+# Flutter injects the Flutter framework here at build time when SPM is enabled.
+FlutterFramework/
+
 # CocoaPods
 #
 # We recommend against adding the Pods directory to your .gitignore. However

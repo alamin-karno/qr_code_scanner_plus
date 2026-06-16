@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`qr_code_scanner_plus` is a Flutter federated plugin for QR/barcode scanning using native platform embedding (AndroidView / UiKitView). It is in **maintenance mode** — the underlying libraries (ZXing for Android, MTBBarcodeScanner for iOS) are no longer actively maintained.
+`qr_code_scanner_plus` is a Flutter federated plugin for QR/barcode scanning using native platform embedding (AndroidView / UiKitView). It is in **maintenance mode** — the Android ZXing library is no longer actively maintained. iOS now uses a native AVFoundation implementation (`NativeBarcodeScanner`) with full Swift Package Manager support.
 
 ## Common Commands
 
@@ -107,3 +107,21 @@ android { defaultConfig { minSdkVersion 20 } }
 ```
 
 **Web** (`web/index.html`): Must include jsQR script before app bundle.
+
+## Changelog & README Rules
+
+**After every feature or bug fix, you MUST:**
+
+1. **Update `CHANGELOG.md`** — add the change under the existing `## Unreleased` block (or create one at the top if it doesn't exist). Use the section headings already established in the file: `#### Breaking Changes`, `#### iOS`, `#### Android`, `#### Bug Fixes`, `#### Dependencies`, `#### CI`, `#### Testing`, etc. Be concise but include the what and why.
+
+2. **Update `README.md`** if the change affects any of the following:
+   - Requirements (minimum SDK, deployment target, Flutter version)
+   - Installation or setup steps
+   - Public API or usage examples
+   - Platform-specific integration instructions
+   - The feature set described in the introduction or Controls sections
+   - Credits (e.g. underlying library changes)
+
+3. **Do NOT commit** changelog/README updates until the user explicitly asks to commit. Stage the work in the working tree and let the user review first.
+
+The `## Unreleased` heading format is `## Unreleased — <next-version>` (e.g. `## Unreleased — 1.2.0`). If the unreleased block already exists, add to it rather than creating a duplicate.

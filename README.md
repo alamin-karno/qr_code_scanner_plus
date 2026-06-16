@@ -3,11 +3,11 @@
 [![pub package](https://img.shields.io/pub/v/qr_code_scanner_plus)](https://pub.dev/packages/qr_code_scanner_plus)
 [![GH Actions](https://github.com/alamin-karno/qr_code_scanner_plus/workflows/dart/badge.svg)](https://github.com/alamin-karno/qr_code_scanner_plus/actions)
 
-A Flutter QR code and barcode scanner that natively embeds the platform camera view inside your widget tree — no Activity or ViewController jumps required. Uses **ZXing** on Android and **MTBBarcodeScanner** on iOS.
+A Flutter QR code and barcode scanner that natively embeds the platform camera view inside your widget tree — no Activity or ViewController jumps required. Uses **ZXing** on Android and native **AVFoundation** on iOS.
 
 > **Fork notice:** This package is a maintained fork of [qr_code_scanner](https://pub.dev/packages/qr_code_scanner) by juliuscanute. It applies community bug-fixes and updates compatibility for Dart 3 and Flutter 3.x.
 
-> **Maintenance mode:** The underlying native libraries (ZXing for Android, MTBBarcodeScanner for iOS) are no longer actively maintained. Only bug fixes and compatibility updates are accepted in this fork.
+> **Maintenance mode:** The Android ZXing library is no longer actively maintained. Only bug fixes and compatibility updates are accepted in this fork.
 
 ## Screenshots
 
@@ -51,7 +51,7 @@ A Flutter QR code and barcode scanner that natively embeds the platform camera v
 | Dart SDK | >=3.0.0                         |
 | Flutter  | >=3.0.0                         |
 | Android  | minSdkVersion 20, compileSdk 35 |
-| iOS      | iOS 8+                          |
+| iOS      | iOS 12+                         |
 
 ## Installation
 
@@ -157,6 +157,12 @@ Add to `ios/Runner/Info.plist`:
 <string>This app needs camera access to scan QR codes</string>
 ```
 
+### Swift Package Manager
+
+This plugin supports **Swift Package Manager** (Flutter 3.22+). No extra steps are needed — Flutter automatically uses `ios/Package.swift` when SPM is enabled in your project.
+
+If your app still uses CocoaPods, the `ios/qr_code_scanner_plus.podspec` continues to work as before.
+
 ## Web Integration
 
 Add to `web/index.html` before your app's `<script>` tag:
@@ -217,5 +223,5 @@ QRView(
 ## Credits
 
 - Android scanning: [ZXing](https://github.com/zxing/zxing) via [zxing-android-embedded](https://github.com/journeyapps/zxing-android-embedded)
-- iOS scanning: [MTBBarcodeScanner](https://github.com/mikebuss/MTBBarcodeScanner)
+- iOS scanning: native `AVFoundation` (replaced MTBBarcodeScanner to enable Swift Package Manager support)
 - Original plugin: [juliuscanute/qr_code_scanner](https://github.com/juliuscanute/qr_code_scanner)
