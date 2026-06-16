@@ -3,10 +3,10 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:html' as html;
-import 'dart:js_util';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+
+import 'web_view_registry.dart';
 
 import '../../qr_code_scanner.dart';
 import 'jsqr.dart';
@@ -39,11 +39,9 @@ class WebQrView extends StatefulWidget {
   static Future<bool> cameraAvailable() async {
     final sources =
         await html.window.navigator.mediaDevices!.enumerateDevices();
-    // List<String> vidIds = [];
     var hasCam = false;
     for (final e in sources) {
       if (e.kind == 'videoinput') {
-        // vidIds.add(e['deviceId']);
         hasCam = true;
       }
     }
@@ -53,15 +51,12 @@ class WebQrView extends StatefulWidget {
 
 class _WebQrViewState extends State<WebQrView> {
   html.MediaStream? _localStream;
-  // html.CanvasElement canvas;
-  // html.CanvasRenderingContext2D ctx;
   bool _currentlyProcessing = false;
 
   QRViewControllerWeb? _controller;
 
   late Size _size = const Size(0, 0);
   Timer? timer;
-  String? code;
   String? _errorMsg;
   html.VideoElement video = html.VideoElement();
   String viewID = 'QRVIEW-' + DateTime.now().millisecondsSinceEpoch.toString();
@@ -78,12 +73,9 @@ class _WebQrViewState extends State<WebQrView> {
 
     facing = widget.cameraFacing ?? CameraFacing.front;
 
-    // video = html.VideoElement();
     WebQrView.vidDiv.children = [video];
-    // ignore: UNDEFINED_PREFIXED_NAME
-    ui.platformViewRegistry
-        .registerViewFactory(viewID, (int id) => WebQrView.vidDiv);
-    // giving JavaScipt some time to process the DOM changes
+    platformViewRegistry.registerViewFactory(
+        viewID, (int id) => WebQrView.vidDiv);
     Timer(const Duration(milliseconds: 500), () {
       start();
     });
@@ -114,7 +106,6 @@ class _WebQrViewState extends State<WebQrView> {
     super.dispose();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> _makeCall() async {
     if (_localStream != null) {
       return;
@@ -125,15 +116,11 @@ class _WebQrViewState extends State<WebQrView> {
           video: VideoOptions(
         facingMode: (facing == CameraFacing.front ? 'user' : 'environment'),
       ));
-      // dart style, not working properly:
-      // var stream =
-      //     await html.window.navigator.mediaDevices.getUserMedia(constraints);
-      // straight JS:
       if (_controller == null) {
         _controller = QRViewControllerWeb(this);
         widget.onPlatformViewCreated(_controller!);
       }
-      var stream = await promiseToFuture(getUserMedia(constraints));
+      var stream = await getUserMedia(constraints);
       widget.onPermissionSet?.call(_controller!, true);
       _localStream = stream;
       video.srcObject = _localStream;
@@ -159,18 +146,16 @@ class _WebQrViewState extends State<WebQrView> {
 
   Future<void> _stopStream() async {
     try {
-      // await _localStream.dispose();
       _localStream!.getTracks().forEach((track) {
         if (track.readyState == 'live') {
           track.stop();
         }
       });
-      // video.stop();
       video.srcObject = null;
       _localStream = null;
-      // _localRenderer.srcObject = null;
-      // ignore: empty_catches
-    } catch (e) {}
+    } catch (_) {
+      // Ignore errors during stream cleanup.
+    }
   }
 
   Future<dynamic> _captureFrame2() async {
@@ -180,8 +165,6 @@ class _WebQrViewState extends State<WebQrView> {
     final canvas =
         html.CanvasElement(width: video.videoWidth, height: video.videoHeight);
     final ctx = canvas.context2D;
-    // canvas.width = video.videoWidth;
-    // canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
     final imgData = ctx.getImageData(0, 0, canvas.width!, canvas.height!);
 
@@ -195,15 +178,12 @@ class _WebQrViewState extends State<WebQrView> {
 
     try {
       final code = jsQR(imgData.data, canvas.width, canvas.height);
-      // ignore: unnecessary_null_comparison
-      if (code != null && code.data != null) {
+      if (code != null) {
         _scanUpdateController
             .add(Barcode(code.data, BarcodeFormat.qrcode, code.data.codeUnits));
       }
     } on NoSuchMethodError {
-      // Do nothing, this exception occurs continously in web release when no
-      // code is found.
-      // NoSuchMethodError: method not found: 'get$data' on null
+      // Occurs continuously in web release when no QR code is in frame.
     }
   }
 
@@ -246,7 +226,7 @@ class _WebQrViewState extends State<WebQrView> {
     );
   }
 
-  void _setCanvasSize(ui.Size size) {
+  void _setCanvasSize(Size size) {
     setState(() {
       _size = size;
     });

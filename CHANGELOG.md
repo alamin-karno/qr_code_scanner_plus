@@ -1,3 +1,71 @@
+## Unreleased — 1.1.0
+
+#### Breaking Changes
+* Package renamed to `qr_code_scanner_plus`. Update your import:
+  ```dart
+  import 'package:qr_code_scanner_plus/qr_code_scanner.dart';
+  ```
+* Dart SDK minimum raised to `>=3.0.0`. Flutter minimum raised to `>=3.0.0`.
+* Android `compileSdk` raised to 35, `targetSdkVersion` to 34, JVM target to 17.
+
+#### Bug Fixes
+* **[Dart]** Fix `LateInitializationError` crash on `QRView` dispose — `_channel` is now
+  nullable and `updateDimensions()` is guarded against uninitialized channel.
+  ([upstream PR #696](https://github.com/juliuscanute/qr_code_scanner/pull/696) /
+  [#748](https://github.com/juliuscanute/qr_code_scanner/pull/748))
+* **[Web]** Fix `Undefined name 'platformViewRegistry'` error caused by the removal of
+  `dart:ui.platformViewRegistry` — extracted into `web_view_registry.dart` using
+  `dart:ui_web`.
+  ([upstream PR #760](https://github.com/juliuscanute/qr_code_scanner/pull/760) /
+  [#769](https://github.com/juliuscanute/qr_code_scanner/pull/769) /
+  [#771](https://github.com/juliuscanute/qr_code_scanner/pull/771))
+* **[Web]** Remove `dart:js_util` import (removed in Dart 3.10) and replace
+  `promiseToFuture()` with direct `await` on the JS-annotated `Future<dynamic>`.
+* **[Web]** Fix `jsQR()` return type to `Code?` (nullable) to match actual JS behaviour
+  where null is returned when no QR code is in frame.
+* **[Dart]** Add `AppLifecycleState.hidden` case to `LifecycleEventHandler` to fix
+  exhaustive switch warning on Flutter 3.13+.
+  ([upstream PR #760](https://github.com/juliuscanute/qr_code_scanner/pull/760))
+
+#### Android
+* Bumped `compileSdk` 33 → 35.
+  ([upstream PR #756](https://github.com/juliuscanute/qr_code_scanner/pull/756) /
+  [#769](https://github.com/juliuscanute/qr_code_scanner/pull/769))
+* Bumped `targetSdkVersion` 33 → 34.
+* Bumped JVM target 11 → 17 (`jvmTarget`, `sourceCompatibility`, `targetCompatibility`).
+  ([upstream PR #769](https://github.com/juliuscanute/qr_code_scanner/pull/769))
+* Bumped `kotlin_version` 1.9.0 → 1.9.20.
+  ([upstream PR #709](https://github.com/juliuscanute/qr_code_scanner/pull/709))
+* Bumped Android Gradle Plugin 8.1.0 → 8.1.4.
+  ([upstream PR #716](https://github.com/juliuscanute/qr_code_scanner/pull/716))
+* Bumped Gradle wrapper 7.5.1 → 8.4.
+  ([upstream PR #730](https://github.com/juliuscanute/qr_code_scanner/pull/730))
+* Bumped `desugar_jdk_libs` 2.0.3 → 2.0.4.
+  ([upstream PR #708](https://github.com/juliuscanute/qr_code_scanner/pull/708))
+* Moved `namespace` declaration unconditionally to top of `android {}` block; removed
+  `package` attribute from `AndroidManifest.xml` (required by AGP 8+).
+  ([upstream PR #764](https://github.com/juliuscanute/qr_code_scanner/pull/764))
+* Example app `compileSdk` bumped to 35; `minSdkVersion` uses `flutter.minSdkVersion`.
+
+#### Dependencies
+* Upgraded `js` package `^0.6.3` → `^0.7.1` for Dart 3 compatibility.
+  ([upstream PR #739](https://github.com/juliuscanute/qr_code_scanner/pull/739) /
+  [#749](https://github.com/juliuscanute/qr_code_scanner/pull/749))
+
+#### CI
+* Bumped `actions/checkout` v3 → v4.
+  ([upstream PR #695](https://github.com/juliuscanute/qr_code_scanner/pull/695))
+* Bumped `subosito/flutter-action` v2.10.0 → v2.12.0.
+  ([upstream PR #711](https://github.com/juliuscanute/qr_code_scanner/pull/711))
+* Updated CI Java version 11 → 17 to match plugin JVM target.
+
+#### Chore
+* Updated `.gitignore` (root and example): added `ios/Flutter/ephemeral/`,
+  `key.properties`, `*.jks`, `Flutter.podspec`, `macOS` entries.
+* Replaced deprecated `describeEnum()` calls in example with `.name` getter (Dart 3).
+
+---
+
 ## 1.0.0
 Breaking changes:
 Minimum Flutter version is now Flutter 3.0.0 (Dart 2.17.0).
