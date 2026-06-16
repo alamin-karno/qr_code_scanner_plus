@@ -185,7 +185,7 @@ class _QRViewExampleState extends State<QRViewExample> {
 
   @override
   void dispose() {
-    controller?.dispose();
+    // QRViewController self-disposes when the QRView widget unmounts.
     super.dispose();
   }
 }

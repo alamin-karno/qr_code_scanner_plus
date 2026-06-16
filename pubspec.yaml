@@ -5,11 +5,11 @@ homepage: https://github.com/alamin-karno/qr_code_scanner_plus
 repository: https://github.com/alamin-karno/qr_code_scanner_plus
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
-  flutter: ">=3.0.0"
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
 
 dependencies:
-  js: ^0.7.1
+  web: ^1.0.0
   flutter:
     sdk: flutter
   flutter_web_plugins:

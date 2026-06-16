@@ -1,3 +1,47 @@
+## Unreleased — 1.2.0
+
+#### iOS
+* **Fix UI hang on dispose for iOS 18+**: `stopCamera()` now calls `pauseCamera` instead of
+  `stopCamera` on iOS 18 and later to avoid a 1–3 second UI freeze when the scanner page is
+  dismissed. iOS version is parsed robustly (handles hotfix versions like `26.0.1`).
+  (Ported from [vespr-wallet/qr_code_scanner_plus](https://github.com/vespr-wallet/qr_code_scanner_plus))
+* **Fix crash when popping page during resume**: `QRViewController` now tracks a `disposed`
+  flag and guards against double-dispose; `_QRViewState.dispose()` calls `_disposeImpl()` to
+  cleanly stop the camera before teardown.
+
+#### Dart
+* **Self-dispose pattern**: `QRViewController` now automatically disposes itself when the
+  `QRView` widget is removed from the tree — callers no longer need to call `dispose()`.
+  The public `dispose()` method is deprecated and is now a no-op (logs a warning).
+  (Ported from [vespr-wallet/qr_code_scanner_plus](https://github.com/vespr-wallet/qr_code_scanner_plus))
+* Added platform detection layer (`lib/src/platform/`) using conditional imports so
+  `Platform.operatingSystemVersion` is read on mobile/desktop and a user-agent string is
+  used on web — enabling the iOS-version check without breaking WASM builds.
+* Web conditional import updated to include `dart.library.js_interop` in addition to
+  `dart.library.html`, enabling the web scanner on WASM targets.
+
+#### Web
+* **Migrated from `dart:html` / `package:js` to `package:web` / `dart:js_interop`** — the
+  old APIs are deprecated and unavailable in WASM. `flutter_qr_web.dart`, `jsqr.dart`, and
+  `media.dart` all rewritten.
+  (Ported from [vespr-wallet/qr_code_scanner_plus](https://github.com/vespr-wallet/qr_code_scanner_plus))
+* **Smarter back camera selection on mobile web**: the implementation now enumerates devices
+  and prefers a camera whose label contains "main" or "primary" before falling back to any
+  back-facing camera or the generic `environment` constraint.
+* Web controller now participates in the self-dispose pattern; `dispose()` is deprecated.
+
+#### Android
+* Bumped `compileSdk` and `targetSdkVersion` to 36.
+* Removed `coreLibraryDesugaringEnabled` and the `desugar_jdk_libs` dependency (no longer
+  needed).
+
+#### Dependencies
+* Removed `js: ^0.7.1` (deprecated, WASM-incompatible).
+* Added `web: ^1.0.0` (required by the `dart:js_interop` web implementation).
+* Raised minimum Flutter SDK to `>=3.24.0` and Dart SDK to `>=3.5.0`.
+
+---
+
 ## Unreleased — 1.1.0
 
 #### iOS

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,11 +13,20 @@ import 'types/camera.dart';
 import 'types/camera_exception.dart';
 import 'types/features.dart';
 import 'web/flutter_qr_stub.dart'
-// ignore: uri_does_not_exist
+    if (dart.library.js) 'web/flutter_qr_web.dart'
+    if (dart.library.js_interop) 'web/flutter_qr_web.dart'
     if (dart.library.html) 'web/flutter_qr_web.dart';
+
+import 'platform/platform_info_stub.dart'
+    if (dart.library.io) 'platform/platform_info_vm.dart'
+    if (dart.library.js) 'platform/platform_info_web.dart'
+    if (dart.library.js_interop) 'platform/platform_info_web.dart'
+    if (dart.library.html) 'platform/platform_info_web.dart';
 
 typedef QRViewCreatedCallback = void Function(QRViewController);
 typedef PermissionSetCallback = void Function(QRViewController, bool);
+
+const _defaultIOSMajorVersionOnUnknown = 18;
 
 /// The [QRView] is the view where the camera
 /// and the barcode scanner gets displayed.
@@ -59,6 +69,7 @@ class QRView extends StatefulWidget {
 
 class _QRViewState extends State<QRView> {
   MethodChannel? _channel;
+  QRViewController? controller;
   late LifecycleEventHandler _observer;
 
   @override
@@ -84,14 +95,14 @@ class _QRViewState extends State<QRView> {
   void dispose() {
     super.dispose();
     WidgetsBinding.instance.removeObserver(_observer);
+    controller?._disposeImpl();
   }
 
   Future<void> updateDimensions() async {
-    if (_channel != null) {
-      await QRViewController.updateDimensions(
-          widget.key as GlobalKey<State<StatefulWidget>>, _channel!,
-          overlay: widget.overlay);
-    }
+    if (_channel == null) return;
+    await QRViewController.updateDimensions(
+        widget.key as GlobalKey<State<StatefulWidget>>, _channel!,
+        overlay: widget.overlay);
   }
 
   bool onNotification(notification) {
@@ -116,9 +127,8 @@ class _QRViewState extends State<QRView> {
   }
 
   Widget _getPlatformQrView() {
-    Widget _platformQrView;
     if (kIsWeb) {
-      _platformQrView = createWebQrView(
+      return createWebQrView(
         onPlatformViewCreated: widget.onQRViewCreated,
         onPermissionSet: widget.onPermissionSet,
         cameraFacing: widget.cameraFacing,
@@ -126,36 +136,35 @@ class _QRViewState extends State<QRView> {
     } else {
       switch (defaultTargetPlatform) {
         case TargetPlatform.android:
-          _platformQrView = AndroidView(
+          return AndroidView(
             viewType: 'net.touchcapture.qr.flutterqr/qrview',
             onPlatformViewCreated: _onPlatformViewCreated,
             creationParams:
                 _QrCameraSettings(cameraFacing: widget.cameraFacing).toMap(),
             creationParamsCodec: const StandardMessageCodec(),
           );
-          break;
         case TargetPlatform.iOS:
-          _platformQrView = UiKitView(
+          return UiKitView(
             viewType: 'net.touchcapture.qr.flutterqr/qrview',
             onPlatformViewCreated: _onPlatformViewCreated,
             creationParams:
                 _QrCameraSettings(cameraFacing: widget.cameraFacing).toMap(),
             creationParamsCodec: const StandardMessageCodec(),
           );
-          break;
         default:
           throw UnsupportedError(
               "Trying to use the default qrview implementation for $defaultTargetPlatform but there isn't a default one");
       }
     }
-    return _platformQrView;
   }
 
   void _onPlatformViewCreated(int id) {
+    if (!mounted) return;
+
     _channel = MethodChannel('net.touchcapture.qr.flutterqr/qrview_$id');
 
     // Start scan after creation of the view
-    final controller = QRViewController._(
+    final newController = QRViewController._(
         _channel!,
         widget.key as GlobalKey<State<StatefulWidget>>?,
         widget.onPermissionSet,
@@ -163,8 +172,11 @@ class _QRViewState extends State<QRView> {
       .._startScan(widget.key as GlobalKey<State<StatefulWidget>>,
           widget.overlay, widget.formatsAllowed);
 
-    // Initialize the controller for controlling the QRView
-    widget.onQRViewCreated(controller);
+    // Dispose previous controller before replacing it
+    controller?._disposeImpl();
+    controller = newController;
+
+    widget.onQRViewCreated(newController);
   }
 }
 
@@ -217,6 +229,7 @@ class QRViewController {
     });
   }
 
+  bool disposed = false;
   final MethodChannel _channel;
   final CameraFacing _cameraFacing;
   final StreamController<Barcode> _scanUpdateController =
@@ -230,7 +243,6 @@ class QRViewController {
   /// Starts the barcode scanner
   Future<void> _startScan(GlobalKey key, QrScannerOverlayShape? overlay,
       List<BarcodeFormat>? barcodeFormats) async {
-    // We need to update the dimension before the scan is started.
     try {
       await QRViewController.updateDimensions(key, _channel, overlay: overlay);
       return await _channel.invokeMethod(
@@ -289,13 +301,34 @@ class QRViewController {
     }
   }
 
-  /// Stops barcode scanning and the camera
+  /// Stops barcode scanning and the camera.
+  ///
+  /// On iOS 18+, calls pauseCamera instead to avoid a multi-second UI hang.
   Future<void> stopCamera() async {
-    try {
-      await _channel.invokeMethod('stopCamera');
-    } on PlatformException catch (e) {
-      throw CameraException(e.code, e.message);
+    if (isIos) {
+      try {
+        final osVersionSplit = osVersion.split(' ');
+        // iOS version looks like "Version 18.0" or "18.0.1" depending on context.
+        final iOSVersion = osVersionSplit.length > 1
+            ? osVersionSplit[1]
+            : '$_defaultIOSMajorVersionOnUnknown.0';
+        final iOSMajorVersion = int.tryParse(
+                iOSVersion.split('.').firstOrNull ??
+                    '$_defaultIOSMajorVersionOnUnknown') ??
+            _defaultIOSMajorVersionOnUnknown;
+        final isAtLeastIOS18 = iOSMajorVersion >= 18;
+
+        if (isAtLeastIOS18) {
+          // stopCamera on iOS 18+ causes the UI to hang for 1-3 seconds.
+          await _channel.invokeMethod('pauseCamera');
+        } else {
+          await _channel.invokeMethod('stopCamera');
+        }
+      } on PlatformException catch (e) {
+        throw CameraException(e.code, e.message);
+      }
     }
+    // no-op on Android and web (lifecycle callbacks handle Android camera)
   }
 
   /// Resumes barcode scanning
@@ -321,9 +354,29 @@ class QRViewController {
     }
   }
 
-  /// Stops the camera and disposes the barcode stream.
+  @Deprecated(
+    "Disposing the QRViewController is no longer necessary. The controller self-disposes when the QRView widget is unmounted.",
+  )
   void dispose() {
-    if (defaultTargetPlatform == TargetPlatform.iOS) stopCamera();
+    log(
+      "It is not required to call dispose() on QRViewController anymore. It will be auto disposed.",
+      name: "qr_code_scanner_plus",
+      level: 900,
+    );
+  }
+
+  /// Stops the camera and closes the barcode stream. Called automatically when QRView unmounts.
+  void _disposeImpl() {
+    if (disposed) {
+      log(
+        "QRViewController was disposed more than once",
+        name: "qr_code_scanner_plus",
+        level: 900,
+      );
+      return;
+    }
+    disposed = true;
+    stopCamera();
     _scanUpdateController.close();
   }
 
@@ -361,7 +414,7 @@ class QRViewController {
     return false;
   }
 
-  //Starts/Stops invert scanning.
+  /// Starts/Stops invert scanning (Android only).
   Future<void> scanInvert(bool isScanInvert) async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       try {
