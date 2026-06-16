@@ -1,5 +1,23 @@
 ## Unreleased — 1.1.0
 
+#### iOS
+* Replaced `MTBBarcodeScanner` (CocoaPods-only, archived upstream) with a purpose-built
+  `NativeBarcodeScanner` class backed by `AVFoundation`. Eliminates the only external iOS
+  dependency and unblocks Swift Package Manager builds.
+  ([upstream #776](https://github.com/juliuscanute/qr_code_scanner/issues/776))
+* Added **Swift Package Manager** support via `ios/Package.swift` (`swift-tools-version: 5.9`).
+  Both CocoaPods and SPM share the same Swift source files under
+  `ios/Sources/qr_code_scanner_plus/` — single source of truth, zero duplication.
+* Bumped iOS deployment target `8.0` → `12.0` (required by modern `AVFoundation` APIs).
+* Updated `pluginClass` from `FlutterQrPlugin` (ObjC bridge) to `SwiftFlutterQrPlugin` (Swift)
+  so SPM-based plugin registration works without an ObjC shim.
+* Removed `ios/qr_code_scanner.podspec`; replaced by `ios/qr_code_scanner_plus.podspec`.
+
+#### Testing
+* Added `ios/Tests/QRCodeScannerPlusTests.swift` — 11 unit tests for `NativeBarcodeScanner`
+  state, camera-position enum, and torch behaviour. Works with both `pod test` (via
+  `test_spec`) and SPM `.testTarget`.
+
 #### Breaking Changes
 * Package renamed to `qr_code_scanner_plus`. Update your import:
   ```dart
