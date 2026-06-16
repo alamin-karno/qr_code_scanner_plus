@@ -5,9 +5,13 @@
   `NativeBarcodeScanner` class backed by `AVFoundation`. Eliminates the only external iOS
   dependency and unblocks Swift Package Manager builds.
   ([upstream #776](https://github.com/juliuscanute/qr_code_scanner/issues/776))
-* Added **Swift Package Manager** support via `ios/Package.swift` (`swift-tools-version: 5.9`).
+* Added **Swift Package Manager** support. Package manifest at
+  `ios/qr_code_scanner_plus/Package.swift` (`swift-tools-version: 5.9`), following the
+  official Flutter plugin convention (`ios/<plugin_name>/Package.swift`). Flutter injects
+  `FlutterFramework` as a local package at build time; the manifest declares it via
+  `.package(name: "FlutterFramework", path: "../FlutterFramework")`.
   Both CocoaPods and SPM share the same Swift source files under
-  `ios/Sources/qr_code_scanner_plus/` — single source of truth, zero duplication.
+  `ios/qr_code_scanner_plus/Sources/qr_code_scanner_plus/` — single source of truth.
 * Bumped iOS deployment target `8.0` → `12.0` (required by modern `AVFoundation` APIs).
 * Updated `pluginClass` from `FlutterQrPlugin` (ObjC bridge) to `SwiftFlutterQrPlugin` (Swift)
   so SPM-based plugin registration works without an ObjC shim.

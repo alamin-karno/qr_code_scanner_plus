@@ -16,13 +16,13 @@ fixes and Swift Package Manager support.
   s.author           = { 'alamin-karno' => 'shadman.sakib@vivasoftltd.com' }
   s.source           = { :path => '.' }
 
-  # Shared Swift sources used by both CocoaPods and Swift Package Manager.
-  s.source_files     = 'Sources/qr_code_scanner_plus/**/*.swift'
+  # Shared Swift sources — same directory used by Swift Package Manager.
+  s.source_files     = 'qr_code_scanner_plus/Sources/qr_code_scanner_plus/**/*.swift'
   s.dependency 'Flutter'
   s.ios.deployment_target = '12.0'
   s.swift_version = '5.0'
 
   s.test_spec 'Tests' do |test_spec|
-    test_spec.source_files = 'Tests/**/*.swift'
+    test_spec.source_files = 'qr_code_scanner_plus/Tests/**/*.swift'
   end
 end
