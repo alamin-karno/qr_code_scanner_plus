@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace 'net.touchcapture.qr.flutterqrexample'
+    namespace 'com.vivasoft.qrScannerExample'
     compileSdk 36
 
     sourceSets {
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "net.touchcapture.qr.flutterqrexample"
+        applicationId "com.vivasoft.qrScannerExample"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
