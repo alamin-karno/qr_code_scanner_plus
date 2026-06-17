@@ -76,7 +76,7 @@ class QrScannerOverlayShape extends ShapeBorder {
     final height = rect.height;
     final borderOffset = borderWidth / 2;
     final _borderLength =
-        borderLength > min(cutOutHeight, cutOutHeight) / 2 + borderWidth * 2
+        borderLength > min(cutOutWidth, cutOutHeight) / 2 + borderWidth * 2
             ? borderWidthSize / 2
             : borderLength;
     final _cutOutWidth =
