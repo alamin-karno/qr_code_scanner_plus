@@ -34,6 +34,7 @@ class QRView(
     private val cameraFacingFront = 1
 
     private var isRequestingPermission = false
+    private var hasReportedPermission = false
     private var isTorchOn = false
     private var isPaused = false
     private var barcodeView: CustomFramingRectBarcodeView? = null
@@ -314,6 +315,7 @@ class QRView(
         val permissionGranted =
             grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
 
+        hasReportedPermission = permissionGranted
         channel.invokeMethod(CHANNEL_METHOD_ON_PERMISSION_SET, permissionGranted)
 
         return permissionGranted
@@ -323,11 +325,16 @@ class QRView(
 
     private fun checkAndRequestPermission() {
         if (hasCameraPermission) {
-            channel.invokeMethod(CHANNEL_METHOD_ON_PERMISSION_SET, true)
+            if (!hasReportedPermission) {
+                hasReportedPermission = true
+                channel.invokeMethod(CHANNEL_METHOD_ON_PERMISSION_SET, true)
+            }
             return
         }
 
+        hasReportedPermission = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !isRequestingPermission) {
+            isRequestingPermission = true
             QrShared.activity?.requestPermissions(
                 arrayOf(Manifest.permission.CAMERA),
                 cameraRequestCode

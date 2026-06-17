@@ -211,7 +211,9 @@ class QRViewController {
             final format = BarcodeTypesExtension.fromString(rawType);
             if (format != BarcodeFormat.unknown) {
               final barcode = Barcode(code, format, rawBytes);
-              _scanUpdateController.sink.add(barcode);
+              if (!_scanUpdateController.isClosed) {
+                _scanUpdateController.sink.add(barcode);
+              }
             } else {
               throw Exception('Unexpected barcode type $rawType');
             }
@@ -257,8 +259,7 @@ class QRViewController {
     try {
       var cameraFacing = await _channel.invokeMethod('getCameraInfo') as int;
       if (cameraFacing == -1) return _cameraFacing;
-      return CameraFacing
-          .values[await _channel.invokeMethod('getCameraInfo') as int];
+      return CameraFacing.values[cameraFacing];
     } on PlatformException catch (e) {
       throw CameraException(e.code, e.message);
     }

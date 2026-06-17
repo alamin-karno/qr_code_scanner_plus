@@ -34,6 +34,29 @@
   flag and guards against double-dispose; `_QRViewState.dispose()` calls `_disposeImpl()` to
   cleanly stop the camera before teardown.
 
+#### Bug Fixes
+* **Fix `getCameraInfo` invoking the platform channel twice**: the second
+  `await _channel.invokeMethod('getCameraInfo')` was redundant; now reuses the already-fetched
+  value. Closes [#11](https://github.com/alamin-karno/qr_code_scanner_plus/issues/11).
+* **Fix `StateError` when a barcode event arrives after dispose**: `_scanUpdateController.sink.add()`
+  is now guarded with `isClosed` so in-flight `onRecognizeQR` events after teardown are silently
+  dropped instead of crashing.
+  Closes [#15](https://github.com/alamin-karno/qr_code_scanner_plus/issues/15).
+* **Fix `QrScannerOverlayShape` border-length clamp using wrong dimension**: `min(cutOutHeight, cutOutHeight)`
+  typo corrected to `min(cutOutWidth, cutOutHeight)`, preventing corner brackets from overflowing
+  the narrow axis of a non-square scan window.
+  Closes [#14](https://github.com/alamin-karno/qr_code_scanner_plus/issues/14).
+
+#### Android
+* **Fix `isRequestingPermission` guard never engaged**: `isRequestingPermission = true` was
+  missing before calling `requestPermissions`, so the `!isRequestingPermission` guard was always
+  bypassed and permission dialogs could fire repeatedly.
+  Closes [#12](https://github.com/alamin-karno/qr_code_scanner_plus/issues/12).
+* **Fix `onPermissionSet` firing on every `startScan` call**: added `hasReportedPermission`
+  flag so `onPermissionSet(true)` is sent only once when the permission is first confirmed, not
+  on every scan start. The flag resets when permission is revoked.
+  Closes [#13](https://github.com/alamin-karno/qr_code_scanner_plus/issues/13).
+
 #### Dart
 * **Self-dispose pattern**: `QRViewController` now automatically disposes itself when the
   `QRView` widget is removed from the tree — callers no longer need to call `dispose()`.
